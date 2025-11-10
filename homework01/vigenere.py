@@ -13,15 +13,17 @@ def encrypt_vigenere(plaintext: str, keyword: str) -> str:
     if not keyword:
         return plaintext
     key_idx = 0
+    key_len = len(key)
 
     for char in plaintext:
+        shift = ord(key[key_idx % key_len]) - ord("a")
         if char.isalpha():
             base = ord("A") if char.isupper() else ord("a")
-            shift = ord(key[key_idx % len(key)]) - ord("a")
             ciphertext += chr((ord(char) - base + shift) % 26 + base)
-            key_idx += 1
         else:
             ciphertext += char
+        key_idx += 1
+
     return ciphertext
 
 
@@ -41,15 +43,15 @@ def decrypt_vigenere(ciphertext: str, keyword: str) -> str:
     if not keyword:
         return ciphertext
     key_idx = 0
+    key_len = len(key)
 
     for char in ciphertext:
+        shift = ord(key[key_idx % key_len]) - ord("a")
         if char.isalpha():
             base = ord("A") if char.isupper() else ord("a")
-            shift = ord(key[key_idx % len(key)]) - ord("a")
             plaintext += chr((ord(char) - base - shift) % 26 + base)
-            key_idx += 1
         else:
             plaintext += char
-    return plaintext
+        key_idx += 1
 
     return plaintext
