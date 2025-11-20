@@ -12,11 +12,9 @@ def is_prime(n: int) -> bool:
     >>> is_prime(8)
     False
     """
-    # PUT YOUR CODE HERE
-    if n <= 1:
-        return False
+
     if n <= 3:
-        return True
+        return n > 1
     if n % 2 == 0:
         return False
     i = 3
@@ -48,20 +46,17 @@ def multiplicative_inverse(e: int, phi: int) -> int:
     >>> multiplicative_inverse(7, 40)
     23
     """
-    # PUT YOUR CODE HERE
+
     t, new_t = 0, 1
     r, new_r = phi, e
 
     while new_r != 0:
         q = r // new_r
-        t, new_t = new_t, t - q * new_t
+        t, new_t = new_t % phi, (t - q * new_t) % phi
         r, new_r = new_r, r - q * new_r
 
     if r != 1:
         raise ValueError("multiplicative inverse does not exist")
-
-    if t < 0:
-        t += phi
     return t
 
 
