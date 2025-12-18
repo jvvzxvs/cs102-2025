@@ -13,10 +13,13 @@ def remove_wall(
     grid: List[List[Union[str, int]]], coord: Tuple[int, int]
 ) -> List[List[Union[str, int]]]:
     """
+    Сносит одну стену рядом с клеткой coord
+    Случайно выбирает направление вверх или вправо
+    Если в выбранном направлении выход за границы, берет другое направление
 
-    :param grid:
-    :param coord:
-    :return:
+    :param grid: Лабиринт (стены "■", проходы " ")
+    :param coord: Координаты клетки (x, y), обычно с нечётными координатами
+    :return: Тот же grid (меняется на месте)
     """
 
     x, y = coord
@@ -45,11 +48,18 @@ def bin_tree_maze(
     rows: int = 15, cols: int = 15, random_exit: bool = True
 ) -> List[List[Union[str, int]]]:
     """
+    Генерирует лабиринт
 
-    :param rows:
-    :param cols:
-    :param random_exit:
-    :return:
+    Проходы - клетки с нечетными координатами. Для каждой такой клетки
+    сносится одна стена: вверх или вправо
+
+    Две клетки на границе помечаются как вход/выход символом "X"
+
+    :param rows: Количество строк
+    :param cols: Количество столбцов
+    :param random_exit: True вход/выход случайные, False фиксированные
+    :return: Готовая сетка лабиринта
+
     """
 
     grid = create_grid(rows, cols)
@@ -86,9 +96,10 @@ def bin_tree_maze(
 
 def get_exits(grid: List[List[Union[str, int]]]) -> List[Tuple[int, int]]:
     """
+    Находит все выходы "X" в лабиринте
 
-    :param grid:
-    :return:
+    :param grid: Сетка лабиринта
+    :return: Список координат (x, y) всех клеток "X"
     """
 
     exits: List[Tuple[int, int]] = []
@@ -101,10 +112,13 @@ def get_exits(grid: List[List[Union[str, int]]]) -> List[Tuple[int, int]]:
 
 def make_step(grid: List[List[Union[str, int]]], k: int) -> List[List[Union[str, int]]]:
     """
+    Делает один шаг при поиске пути
 
-    :param grid:
-    :param k:
-    :return:
+    Из всех клеток со значением k помечает соседей, которые равны 0, значением k+1
+
+    :param grid: Сетка, где стены "■", а свободные клетки числа
+    :param k: Текущий номер шага
+    :return: Тот же grid
     """
 
     rows, cols = len(grid), len(grid[0])
@@ -130,10 +144,15 @@ def shortest_path(
     grid: List[List[Union[str, int]]], exit_coord: Tuple[int, int]
 ) -> Optional[Union[Tuple[int, int], List[Tuple[int, int]]]]:
     """
+    Восстанавливает кратчайший путь по размеченной сетке
 
-    :param grid:
-    :param exit_coord:
-    :return:
+    В grid уже должны быть числа расстояний
+
+    Идем от exit_coord назад
+
+    :param grid: Сетка с числами расстояний и стенами
+    :param exit_coord: Координаты выхода, откуда начинаем восстановление
+    :return: Список координат пути от выхода к старту, или None если пути нет
     """
     x, y = exit_coord
     if not isinstance(grid[x][y], int) or grid[x][y] == 0:
@@ -162,10 +181,11 @@ def shortest_path(
 
 def encircled_exit(grid: List[List[Union[str, int]]], coord: Tuple[int, int]) -> bool:
     """
+    Проверяет, что выход в тупике
 
-    :param grid:
-    :param coord:
-    :return:
+    :param grid: Сетка лабиринта
+    :param coord: Координаты выхода (x, y)
+    :return: True если выход окружен стенами, иначе False
     """
 
     x, y = coord
@@ -186,9 +206,13 @@ def solve_maze(
     grid: List[List[Union[str, int]]],
 ) -> Tuple[List[List[Union[str, int]]], Optional[Union[Tuple[int, int], List[Tuple[int, int]]]]]:
     """
+    Находит кратчайший путь между двумя выходами "X"
 
-    :param grid:
-    :return:
+    Делает копию grid, превращает проходы в 0, ставит старт = 1,
+    запускает волну до второго выхода и потом восстанавливает путь.
+
+    :param grid: Лабиринт (стены "■", проходы " ", два выхода "X")
+    :return: исходный grid, путь
     """
 
     exits = get_exits(grid)
@@ -234,10 +258,13 @@ def add_path_to_grid(
     grid: List[List[Union[str, int]]], path: Optional[Union[Tuple[int, int], List[Tuple[int, int]]]]
 ) -> List[List[Union[str, int]]]:
     """
+    Рисует путь на лабиринте
 
-    :param grid:
-    :param path:
-    :return:
+    Все клетки из path помечает символом "X"
+
+    :param grid: Сетка лабиринта
+    :param path: Путь или None
+    :return: Тот же grid с отмеченным путем
     """
 
     if path:
