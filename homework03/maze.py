@@ -9,9 +9,7 @@ def create_grid(rows: int = 15, cols: int = 15) -> List[List[Union[str, int]]]:
     return [["■"] * cols for _ in range(rows)]
 
 
-def remove_wall(
-    grid: List[List[Union[str, int]]], coord: Tuple[int, int]
-) -> List[List[Union[str, int]]]:
+def remove_wall(grid: List[List[Union[str, int]]], coord: Tuple[int, int]) -> List[List[Union[str, int]]]:
     """
     Сносит одну стену рядом с клеткой coord
     Случайно выбирает направление вверх или вправо
@@ -44,9 +42,7 @@ def remove_wall(
     return grid
 
 
-def bin_tree_maze(
-    rows: int = 15, cols: int = 15, random_exit: bool = True
-) -> List[List[Union[str, int]]]:
+def bin_tree_maze(rows: int = 15, cols: int = 15, random_exit: bool = True) -> List[List[Union[str, int]]]:
     """
     Генерирует лабиринт
 
@@ -155,10 +151,15 @@ def shortest_path(
     :return: Список координат пути от выхода к старту, или None если пути нет
     """
     x, y = exit_coord
-    if not isinstance(grid[x][y], int) or grid[x][y] == 0:
+    cell = grid[x][y]
+
+    # не могу объединить в один if потому что mypy начинает ругаться на k: int = cell
+    if not isinstance(cell, int):
+        return None
+    if cell == 0:
         return None
 
-    k = grid[x][y]
+    k: int = cell
     path: List[Tuple[int, int]] = [(x, y)]
 
     directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
