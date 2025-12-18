@@ -147,13 +147,87 @@ def solve(grid: tp.List[tp.List[str]]) -> tp.Optional[tp.List[tp.List[str]]]:
     >>> solve(grid)
     [['5', '3', '4', '6', '7', '8', '9', '1', '2'], ['6', '7', '2', '1', '9', '5', '3', '4', '8'], ['1', '9', '8', '3', '4', '2', '5', '6', '7'], ['8', '5', '9', '7', '6', '1', '4', '2', '3'], ['4', '2', '6', '8', '5', '3', '7', '9', '1'], ['7', '1', '3', '9', '2', '4', '8', '5', '6'], ['9', '6', '1', '5', '3', '7', '2', '8', '4'], ['2', '8', '7', '4', '1', '9', '6', '3', '5'], ['3', '4', '5', '2', '8', '6', '1', '7', '9']]
     """
-    pass
+    board = [row[:] for row in grid]
+    n = len(board)
+    if n == 0:
+        return board
+
+    def pick_mrv_position() -> tp.Tuple[tp.Optional[tp.Tuple[int, int]], tp.Optional[tp.Set[str]]]:
+        best_pos: tp.Optional[tp.Tuple[int, int]] = None
+        best_vals: tp.Optional[tp.Set[str]] = None
+        for rr in range(n):
+            for cc in range(n):
+                if board[rr][cc] == ".":
+                    vals = find_possible_values(board, (rr, cc))
+                    if not vals:
+                        return (rr, cc), set()
+                    if best_vals is None or len(vals) < len(best_vals):
+                        best_pos, best_vals = (rr, cc), vals
+                        if len(best_vals) == 1:
+                            return best_pos, best_vals
+        return best_pos, best_vals
+
+    def backtrack() -> bool:
+        pos, vals = pick_mrv_position()
+        if pos is None:
+            return True  # нет пустых клеток
+        if vals is None or len(vals) == 0:
+            return False
+
+        r, c = pos
+        for v in sorted(vals):
+            board[r][c] = v
+            if backtrack():
+                return True
+            board[r][c] = "."
+        return False
+
+    return board if backtrack() else None
 
 
 def check_solution(solution: tp.List[tp.List[str]]) -> bool:
     """ Если решение solution верно, то вернуть True, в противном случае False """
     # TODO: Add doctests with bad puzzles
-    pass
+    if solution is None:
+        return False
+    n = len(solution)
+    if n == 0:
+        return True
+    if any(len(row) != n for row in solution):
+        return False
+
+    required = {str(i) for i in range(1, n + 1)}
+    block = int(n ** 0.5)
+    if block * block != n:
+        return False
+    # строки
+    for r in range(n):
+        row = solution[r]
+        if "." in row:
+            return False
+        if set(row) != required:
+            return False
+
+    # столбцы
+    for c in range(n):
+        col = [solution[r][c] for r in range(n)]
+        if "." in col:
+            return False
+        if set(col) != required:
+            return False
+
+    # блоки
+    for r0 in range(0, n, block):
+        for c0 in range(0, n, block):
+            blk: tp.List[str] = []
+            for rr in range(r0, r0 + block):
+                for cc in range(c0, c0 + block):
+                    blk.append(solution[rr][cc])
+            if "." in blk:
+                return False
+            if set(blk) != required:
+                return False
+    return True
 
 
 def generate_sudoku(N: int) -> tp.List[tp.List[str]]:
@@ -177,7 +251,31 @@ def generate_sudoku(N: int) -> tp.List[tp.List[str]]:
     >>> check_solution(solution)
     True
     """
-    pass
+    import random
+
+    N = max(0, N)
+    size = 9
+    block = 3
+    filled = min(N, size * size)
+
+    # базовое корректное решение
+    def pattern(r: int, c: int) -> int:
+        return (block * (r % block) + r // block + c) % size
+    rows = [g * block + r for g in random.sample(range(block), block) for r in random.sample(range(block), block)]
+    cols = [g * block + c for g in random.sample(range(block), block) for c in random.sample(range(block), block)]
+    nums = random.sample(range(1, size + 1), size)
+
+    solved = [[str(nums[pattern(r, c)]) for c in cols] for r in rows]
+
+    # выкидываем клетки до нужного числа заполненных
+    positions = [(r, c) for r in range(size) for c in range(size)]
+    random.shuffle(positions)
+    to_blank = size * size - filled
+    for i in range(to_blank):
+        r, c = positions[i]
+        solved[r][c] = "."
+
+    return solved
 
 
 if __name__ == "__main__":
