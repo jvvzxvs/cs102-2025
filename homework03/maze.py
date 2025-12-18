@@ -22,25 +22,22 @@ def remove_wall(
     x, y = coord
     rows, cols = len(grid), len(grid[0])
 
-    can_go_north = (x - 2) >= 0
-    can_go_east = (y + 2) < cols
+    direction = choice(("N", "E"))
 
-    if not can_go_north and not can_go_east:
-        return grid
-
-    direction = None
-    if can_go_north and can_go_east:
-        direction = choice(("N", "E"))
-    elif can_go_north:
-        direction = "N"
-    else:
+    if direction == "N" and (x - 2) < 0:
         direction = "E"
+    if direction == "E" and (y + 2) >= cols:
+        direction = "N"
+
+    if direction == "N" and (x - 2) < 0:
+        return grid
+    if direction == "E" and (y + 2) >= cols:
+        return grid
 
     if direction == "N":
         grid[x - 1][y] = " "
-    else:  # "E"
+    else:
         grid[x][y + 1] = " "
-
     return grid
 
 
@@ -62,6 +59,9 @@ def bin_tree_maze(
             if x % 2 == 1 and y % 2 == 1:
                 grid[x][y] = " "
                 empty_cells.append((x, y))
+
+    for cell in empty_cells:
+        remove_wall(grid, cell)
 
     # 1. выбрать любую клетку
     # 2. выбрать направление: наверх или направо.
@@ -107,7 +107,23 @@ def make_step(grid: List[List[Union[str, int]]], k: int) -> List[List[Union[str,
     :return:
     """
 
-    pass
+    rows, cols = len(grid), len(grid[0])
+    dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+    # собираем фронт чтобы не влиять на текущий проход по grid
+    frontier: List[Tuple[int, int]] = []
+    for i in range(rows):
+        for j in range(cols):
+            if grid[i][j] == k:
+                frontier.append((i, j))
+
+    for x, y in frontier:
+        for dx, dy in dirs:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 0:
+                grid[nx][ny] = k + 1
+
+    return grid
 
 
 def shortest_path(
@@ -119,7 +135,29 @@ def shortest_path(
     :param exit_coord:
     :return:
     """
-    pass
+    x, y = exit_coord
+    if not isinstance(grid[x][y], int) or grid[x][y] == 0:
+        return None
+
+    k = grid[x][y]
+    path: List[Tuple[int, int]] = [(x, y)]
+
+    directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+
+    while k > 1:
+        found = False
+        for dx, dy in directions:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < len(grid) and 0 <= ny < len(grid[0]) and grid[nx][ny] == k - 1:
+                x, y = nx, ny
+                k -= 1
+                path.append((x, y))
+                found = True
+                break
+        if not found:
+            return None
+
+    return path
 
 
 def encircled_exit(grid: List[List[Union[str, int]]], coord: Tuple[int, int]) -> bool:
@@ -130,7 +168,18 @@ def encircled_exit(grid: List[List[Union[str, int]]], coord: Tuple[int, int]) ->
     :return:
     """
 
-    pass
+    x, y = coord
+    rows, cols = len(grid), len(grid[0])
+
+    if not (x == 0 or x == rows - 1 or y == 0 or y == cols - 1):
+        return False
+
+    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < rows and 0 <= ny < cols:
+            if grid[nx][ny] != "■":
+                return False
+    return True
 
 
 def solve_maze(
@@ -142,7 +191,43 @@ def solve_maze(
     :return:
     """
 
-    pass
+    exits = get_exits(grid)
+    if len(exits) < 2:
+        return grid, None
+
+    start = exits[0]
+    end = exits[1]
+
+    if encircled_exit(grid, start) or encircled_exit(grid, end):
+        return grid, None
+
+    work = deepcopy(grid)
+
+    # превращаем все проходы в 0
+    for i in range(len(work)):
+        for j in range(len(work[0])):
+            if work[i][j] != "■":
+                work[i][j] = 0
+
+    sx, sy = start
+    ex, ey = end
+    work[sx][sy] = 1
+
+    k = 1
+    limit = len(work) * len(work[0]) + 5
+
+    while work[ex][ey] == 0 and k < limit:
+        before = deepcopy(work)
+        make_step(work, k)
+        k += 1
+        if work == before:  # волна не продвинулась
+            return grid, None
+
+    if work[ex][ey] == 0:
+        return grid, None
+
+    path = shortest_path(work, end)
+    return grid, path
 
 
 def add_path_to_grid(
