@@ -1,4 +1,5 @@
 import pathlib
+import random
 import typing as tp
 
 T = tp.TypeVar("T")
@@ -14,8 +15,7 @@ def read_sudoku(path: tp.Union[str, pathlib.Path]) -> tp.List[tp.List[str]]:
 
 def create_grid(puzzle: str) -> tp.List[tp.List[str]]:
     digits = [c for c in puzzle if c in "123456789."]
-    grid = group(digits, 9)
-    return grid
+    return group(digits, 9)
 
 
 def display(grid: tp.List[tp.List[str]]) -> None:
@@ -50,7 +50,7 @@ def get_row(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.List[str
     ['.', '8', '9']
     """
     r, _ = pos
-    return list(grid[r])
+    return grid[r]
 
 
 def get_col(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.List[str]:
@@ -81,11 +81,11 @@ def get_block(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.List[s
         return []
     block = int(n**0.5)
     r, c = pos
-    r0 = (r // block) * block
-    c0 = (c // block) * block
+    row_start = (r // block) * block
+    col_start = (c // block) * block
     out: tp.List[str] = []
-    for rr in range(r0, r0 + block):
-        for cc in range(c0, c0 + block):
+    for rr in range(row_start, row_start + block):
+        for cc in range(col_start, col_start + block):
             out.append(grid[rr][cc])
     return out
 
@@ -104,8 +104,49 @@ def find_empty_positions(
     for r, row in enumerate(grid):
         for c, v in enumerate(row):
             if v == ".":
-                return (r, c)
+                return r, c
     return None
+
+
+def pick_mrv_position(
+    board: tp.List[tp.List[str]],
+) -> tp.Tuple[tp.Optional[tp.Tuple[int, int]], tp.Optional[tp.Set[str]]]:
+    """Выбор пустой клетки с минимальным числом допустимых значений"""
+    n = len(board)
+    best_pos: tp.Optional[tp.Tuple[int, int]] = None
+    best_vals: tp.Optional[tp.Set[str]] = None
+
+    for r in range(n):
+        for c in range(n):
+            if board[r][c] != ".":
+                continue
+
+            vals = find_possible_values(board, (r, c))
+            if not vals:
+                return (r, c), set()
+
+            if best_vals is None or len(vals) < len(best_vals):
+                best_pos, best_vals = (r, c), vals
+                if len(best_vals) == 1:
+                    return best_pos, best_vals
+
+    return best_pos, best_vals
+
+
+def backtrack(board: tp.List[tp.List[str]]) -> bool:
+    pos, vals = pick_mrv_position(board)
+    if pos is None:
+        return True  # нет пустых клеток
+    if not vals:
+        return False
+
+    r, c = pos
+    for v in sorted(vals):
+        board[r][c] = v
+        if backtrack(board):
+            return True
+        board[r][c] = "."
+    return False
 
 
 def find_possible_values(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.Set[str]:
@@ -149,38 +190,7 @@ def solve(grid: tp.List[tp.List[str]]) -> tp.Optional[tp.List[tp.List[str]]]:
     n = len(board)
     if n == 0:
         return board
-
-    def pick_mrv_position() -> tp.Tuple[tp.Optional[tp.Tuple[int, int]], tp.Optional[tp.Set[str]]]:
-        best_pos: tp.Optional[tp.Tuple[int, int]] = None
-        best_vals: tp.Optional[tp.Set[str]] = None
-        for rr in range(n):
-            for cc in range(n):
-                if board[rr][cc] == ".":
-                    vals = find_possible_values(board, (rr, cc))
-                    if not vals:
-                        return (rr, cc), set()
-                    if best_vals is None or len(vals) < len(best_vals):
-                        best_pos, best_vals = (rr, cc), vals
-                        if len(best_vals) == 1:
-                            return best_pos, best_vals
-        return best_pos, best_vals
-
-    def backtrack() -> bool:
-        pos, vals = pick_mrv_position()
-        if pos is None:
-            return True  # нет пустых клеток
-        if vals is None or len(vals) == 0:
-            return False
-
-        r, c = pos
-        for v in sorted(vals):
-            board[r][c] = v
-            if backtrack():
-                return True
-            board[r][c] = "."
-        return False
-
-    return board if backtrack() else None
+    return board if backtrack(board) else None
 
 
 def check_solution(solution: tp.List[tp.List[str]]) -> bool:
@@ -198,34 +208,39 @@ def check_solution(solution: tp.List[tp.List[str]]) -> bool:
     block = int(n**0.5)
     if block * block != n:
         return False
-    # строки
+
     for r in range(n):
-        row = solution[r]
-        if "." in row:
-            return False
-        if set(row) != required:
+        row = get_row(solution, (r, 0))
+        if "." in row or set(row) != required:
             return False
 
-    # столбцы
     for c in range(n):
-        col = [solution[r][c] for r in range(n)]
-        if "." in col:
-            return False
-        if set(col) != required:
+        col = get_col(solution, (0, c))
+        if "." in col or set(col) != required:
             return False
 
-    # блоки
     for r0 in range(0, n, block):
         for c0 in range(0, n, block):
-            blk: tp.List[str] = []
-            for rr in range(r0, r0 + block):
-                for cc in range(c0, c0 + block):
-                    blk.append(solution[rr][cc])
-            if "." in blk:
+            blk = get_block(solution, (r0, c0))
+            if "." in blk or set(blk) != required:
                 return False
-            if set(blk) != required:
-                return False
+
     return True
+
+
+def pattern(r: int, c: int, block: int, size: int) -> int:
+    """Индекс числа в базовом решении судоку"""
+    return (block * (r % block) + r // block + c) % size
+
+
+def shuffled_indices(block: int) -> tp.List[int]:
+    """Перемешанные индексы строк/столбцов по группам"""
+    groups = random.sample(range(block), block)
+    out: tp.List[int] = []
+    for g in groups:
+        inside = random.sample(range(block), block)
+        out.extend([g * block + x for x in inside])
+    return out
 
 
 def generate_sudoku(N: int) -> tp.List[tp.List[str]]:
@@ -249,26 +264,20 @@ def generate_sudoku(N: int) -> tp.List[tp.List[str]]:
     >>> check_solution(solution)
     True
     """
-    import random
-
     N = max(0, N)
     size = 9
     block = 3
     filled = min(N, size * size)
 
-    # базовое корректное решение
-    def pattern(r: int, c: int) -> int:
-        return (block * (r % block) + r // block + c) % size
-
-    rows = [g * block + r for g in random.sample(range(block), block) for r in random.sample(range(block), block)]
-    cols = [g * block + c for g in random.sample(range(block), block) for c in random.sample(range(block), block)]
+    rows = shuffled_indices(block)
+    cols = shuffled_indices(block)
     nums = random.sample(range(1, size + 1), size)
 
-    solved = [[str(nums[pattern(r, c)]) for c in cols] for r in rows]
+    solved = [[str(nums[pattern(r, c, block, size)]) for c in cols] for r in rows]
 
-    # выкидываем клетки до нужного числа заполненных
     positions = [(r, c) for r in range(size) for c in range(size)]
     random.shuffle(positions)
+
     to_blank = size * size - filled
     for i in range(to_blank):
         r, c = positions[i]
