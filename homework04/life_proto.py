@@ -79,13 +79,27 @@ class GameOfLife:
         out : Grid
             Матрица клеток размером `cell_height` х `cell_width`.
         """
-        pass
+        if randomize:
+            return [
+                [random.randint(0, 1) for _ in range(self.cell_width)]
+                for _ in range(self.cell_height)
+            ]
+        return [[0] * self.cell_width for _ in range(self.cell_height)]
 
     def draw_grid(self) -> None:
         """
         Отрисовка списка клеток с закрашиванием их в соответствующе цвета.
         """
-        pass
+        for y, row in enumerate(self.grid):
+            for x, cell in enumerate(row):
+                color = pygame.Color("green") if cell else pygame.Color("white")
+                rect = pygame.Rect(
+                    x * self.cell_size,
+                    y * self.cell_size,
+                    self.cell_size,
+                    self.cell_size,
+                )
+                pygame.draw.rect(self.screen, color, rect)
 
     def get_neighbours(self, cell: Cell) -> Cells:
         """
@@ -105,7 +119,16 @@ class GameOfLife:
         out : Cells
             Список соседних клеток.
         """
-        pass
+        r, c = cell
+        neighbours = []
+        for dr in (-1, 0, 1):
+            for dc in (-1, 0, 1):
+                if dr == 0 and dc == 0:
+                    continue
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < self.cell_height and 0 <= nc < self.cell_width:
+                    neighbours.append(self.grid[nr][nc])
+        return neighbours
 
     def get_next_generation(self) -> Grid:
         """
@@ -116,4 +139,18 @@ class GameOfLife:
         out : Grid
             Новое поколение клеток.
         """
-        pass
+        new = self.create_grid()
+        for r in range(self.cell_height):
+            for c in range(self.cell_width):
+                alive = self.grid[r][c]
+                n = sum(self.get_neighbours((r, c)))
+                if alive and n in (2, 3):
+                    new[r][c] = 1
+                elif not alive and n == 3:
+                    new[r][c] = 1
+        return new
+
+
+if __name__ == "__main__":
+    game = GameOfLife(320, 240, 20)
+    game.run()
