@@ -15,7 +15,7 @@ class GameOfLife:
         self,
         size: tp.Tuple[int, int],
         randomize: bool = True,
-        max_generations: tp.Optional[float] = float("inf"),
+        max_generations: tp.Optional[int] = None,
     ) -> None:
         # Размер клеточного поля
         self.rows, self.cols = size
@@ -30,10 +30,7 @@ class GameOfLife:
 
     def create_grid(self, randomize: bool = False) -> Grid:
         if randomize:
-            return [
-                [random.randint(0, 1) for _ in range(self.cols)]
-                for _ in range(self.rows)
-            ]
+            return [[random.randint(0, 1) for _ in range(self.cols)] for _ in range(self.rows)]
         return [[0] * self.cols for _ in range(self.rows)]
 
     def get_neighbours(self, cell: Cell) -> Cells:
@@ -74,6 +71,8 @@ class GameOfLife:
         """
         Не превысило ли текущее число поколений максимально допустимое.
         """
+        if self.max_generations is None:
+            return False
         return self.generations >= self.max_generations
 
     @property
@@ -99,8 +98,5 @@ class GameOfLife:
         """
         Сохранить текущее состояние клеток в указанный файл.
         """
-        text = "\n".join(
-            "".join(str(cell) for cell in row)
-            for row in self.curr_generation
-        )
+        text = "\n".join("".join(str(cell) for cell in row) for row in self.curr_generation)
         filename.write_text(text)
